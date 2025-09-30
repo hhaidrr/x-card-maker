@@ -161,3 +161,45 @@ export class TwitterProfileData {
     };
   }
 }
+
+/**
+ * Profile card generation options
+ */
+export interface CardGenerationOptions {
+  width?: number;
+  height?: number;
+  backgroundColor?: string;
+  textColor?: string;
+  accentColor?: string;
+  fontFamily?: string;
+  showBanner?: boolean;
+  showStats?: boolean;
+  showDescription?: boolean;
+  cardStyle?: 'modern' | 'classic' | 'minimal';
+  outputFormat?: 'png' | 'jpeg';
+  quality?: number;
+}
+
+/**
+ * Profile card generation result
+ */
+export interface CardGenerationResult {
+  success: boolean;
+  outputPath?: string;
+  error?: string;
+  cardInfo?: {
+    width: number;
+    height: number;
+    fileSize: number;
+    format: string;
+  };
+}
+
+/**
+ * Asset paths for card generation
+ */
+export interface CardAssets {
+  profileImagePath?: string;
+  bannerImagePath?: string;
+  profileData: TwitterProfileData;
+}

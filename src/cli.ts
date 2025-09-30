@@ -9,7 +9,8 @@ import { TwitterApiClient } from './twitterApi';
 import { AssetDownloader } from './assetDownloader';
 import { CSVExporter } from './csvExporter';
 import { FolderManager } from './folderManager';
-import { TwitterProfileData } from './types';
+import { ProfileCardGenerator } from './profileCardGenerator';
+import { TwitterProfileData, CardGenerationOptions } from './types';
 
 // Load environment variables
 dotenv.config();
@@ -274,6 +275,157 @@ program
       const csvExporter = new CSVExporter(options.output);
       const masterCsvPath = await csvExporter.createMasterCSV(options.output);
       console.log(chalk.green(`✓ Created master CSV: ${masterCsvPath}`));
+    } catch (error) {
+      console.error(chalk.red(`Error: ${error}`));
+      process.exit(1);
+    }
+  });
+
+// Card generation command: generate profile cards from stored data
+program
+  .command('generate-card')
+  .description('Generate a profile card from stored user data')
+  .argument('<username>', 'Twitter username to generate card for')
+  .option('-o, --output <dir>', 'Downloads directory', './downloads')
+  .option('-w, --width <pixels>', 'Card width in pixels', '1200')
+  .option('-h, --height <pixels>', 'Card height in pixels', '630')
+  .option('-s, --style <style>', 'Card style (modern, classic, minimal)', 'modern')
+  .option('-f, --format <format>', 'Output format (png, jpeg)', 'png')
+  .option('--no-banner', 'Hide banner image')
+  .option('--no-stats', 'Hide statistics')
+  .option('--no-description', 'Hide description')
+  .option('--bg-color <color>', 'Background color (hex)', '#000000')
+  .option('--text-color <color>', 'Text color (hex)', '#ffffff')
+  .option('--accent-color <color>', 'Accent color (hex)', '#1d9bf0')
+  .action(async (username: string, options) => {
+    try {
+      const spinner = ora('Generating profile card...').start();
+      
+      // Load assets from directory
+      spinner.text = 'Loading profile data and assets...';
+      const cardGenerator = new ProfileCardGenerator();
+      const assets = await cardGenerator.loadAssetsFromDirectory(username, options.output);
+      console.log(chalk.blue(`✓ Loaded data for @${username}`));
+      
+      // Prepare generation options
+      const cardOptions: CardGenerationOptions = {
+        width: parseInt(options.width),
+        height: parseInt(options.height),
+        cardStyle: options.style,
+        outputFormat: options.format,
+        showBanner: options.banner !== false,
+        showStats: options.stats !== false,
+        showDescription: options.description !== false,
+        backgroundColor: options.bgColor,
+        textColor: options.textColor,
+        accentColor: options.accentColor
+      };
+      
+      // Generate card
+      spinner.text = 'Generating profile card...';
+      const result = await cardGenerator.generateCard(assets, cardOptions);
+      
+      if (result.success) {
+        spinner.succeed('Profile card generated successfully!');
+        console.log(chalk.green(`✓ Card saved: ${result.outputPath}`));
+        
+        if (result.cardInfo) {
+          console.log(chalk.blue(`  Dimensions: ${result.cardInfo.width}x${result.cardInfo.height}`));
+          console.log(chalk.blue(`  Format: ${result.cardInfo.format}`));
+          console.log(chalk.blue(`  File size: ${Math.round(result.cardInfo.fileSize / 1024)}KB`));
+        }
+      } else {
+        spinner.fail('Failed to generate profile card');
+        console.error(chalk.red(`Error: ${result.error}`));
+        process.exit(1);
+      }
+      
+    } catch (error) {
+      console.error(chalk.red(`Error: ${error}`));
+      process.exit(1);
+    }
+  });
+
+// Batch card generation command: generate cards for all users
+program
+  .command('generate-cards')
+  .description('Generate profile cards for all processed users')
+  .option('-o, --output <dir>', 'Downloads directory', './downloads')
+  .option('-w, --width <pixels>', 'Card width in pixels', '1200')
+  .option('-h, --height <pixels>', 'Card height in pixels', '630')
+  .option('-s, --style <style>', 'Card style (modern, classic, minimal)', 'modern')
+  .option('-f, --format <format>', 'Output format (png, jpeg)', 'png')
+  .option('--no-banner', 'Hide banner image')
+  .option('--no-stats', 'Hide statistics')
+  .option('--no-description', 'Hide description')
+  .option('--bg-color <color>', 'Background color (hex)', '#000000')
+  .option('--text-color <color>', 'Text color (hex)', '#ffffff')
+  .option('--accent-color <color>', 'Accent color (hex)', '#1d9bf0')
+  .action(async (options) => {
+    try {
+      const folderManager = new FolderManager(options.output);
+      const users = await folderManager.getAllUserDirectories();
+      
+      if (users.length === 0) {
+        console.log(chalk.yellow('No processed users found. Run "process" command first.'));
+        return;
+      }
+      
+      console.log(chalk.blue(`Found ${users.length} users to generate cards for`));
+      
+      const cardGenerator = new ProfileCardGenerator();
+      let successCount = 0;
+      let failCount = 0;
+      
+      for (let i = 0; i < users.length; i++) {
+        const username = users[i];
+        console.log(chalk.bold(`\n[${i + 1}/${users.length}] Generating card for @${username}`));
+        
+        try {
+          const spinner = ora(`Generating card for @${username}...`).start();
+          
+          // Load assets
+          const assets = await cardGenerator.loadAssetsFromDirectory(username, options.output);
+          
+          // Prepare generation options
+          const cardOptions: CardGenerationOptions = {
+            width: parseInt(options.width),
+            height: parseInt(options.height),
+            cardStyle: options.style,
+            outputFormat: options.format,
+            showBanner: options.banner !== false,
+            showStats: options.stats !== false,
+            showDescription: options.description !== false,
+            backgroundColor: options.bgColor,
+            textColor: options.textColor,
+            accentColor: options.accentColor
+          };
+          
+          // Generate card
+          const result = await cardGenerator.generateCard(assets, cardOptions);
+          
+          if (result.success) {
+            spinner.succeed(`Card generated for @${username}`);
+            console.log(chalk.green(`  Saved: ${result.outputPath}`));
+            successCount++;
+          } else {
+            spinner.fail(`Failed to generate card for @${username}`);
+            console.error(chalk.red(`  Error: ${result.error}`));
+            failCount++;
+          }
+          
+        } catch (error) {
+          console.error(chalk.red(`Failed to generate card for @${username}: ${error}`));
+          failCount++;
+        }
+      }
+      
+      console.log(chalk.bold(`\n✅ Card generation completed!`));
+      console.log(chalk.green(`  Success: ${successCount}`));
+      if (failCount > 0) {
+        console.log(chalk.red(`  Failed: ${failCount}`));
+      }
+      
     } catch (error) {
       console.error(chalk.red(`Error: ${error}`));
       process.exit(1);

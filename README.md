@@ -9,6 +9,9 @@ A powerful Node.js TypeScript CLI tool that processes Twitter/X profile URLs, do
 - 📸 **Asset Downloading**: Download profile images and banner images
 - 📊 **CSV Export**: Export profile data to CSV files
 - 📁 **Folder Organization**: Organize data by username in structured folders
+- 🎨 **Profile Card Generation**: Generate beautiful X/Twitter-style profile cards using node-canvas
+- 🖼️ **Customizable Cards**: Customize card dimensions, colors, styles, and content
+- 📱 **Multiple Formats**: Export cards as PNG or JPEG images
 - 🎯 **Type Safety**: Full TypeScript support with proper interfaces
 - 🛡️ **Error Handling**: Comprehensive error handling for all operations
 - 🚀 **CLI Interface**: Easy-to-use command-line interface
@@ -74,6 +77,28 @@ npx ts-node src/cli.ts list
 
 # Show detailed summary
 npx ts-node src/cli.ts list --summary
+```
+
+#### Profile Card Generation
+
+```bash
+# Generate a profile card for a specific user
+npx ts-node src/cli.ts generate-card hhaider__
+
+# Generate card with custom dimensions and style
+npx ts-node src/cli.ts generate-card hhaider__ --width 800 --height 400 --style modern
+
+# Generate card without banner or stats
+npx ts-node src/cli.ts generate-card hhaider__ --no-banner --no-stats
+
+# Generate card with custom colors
+npx ts-node src/cli.ts generate-card hhaider__ --bg-color "#1a1a1a" --text-color "#ffffff" --accent-color "#00ff00"
+
+# Generate cards for all processed users
+npx ts-node src/cli.ts generate-cards
+
+# Generate cards with specific format and style
+npx ts-node src/cli.ts generate-cards --format jpeg --style minimal
 ```
 
 #### Cleanup Operations
