@@ -1,79 +1,138 @@
+/**
+ * Main entry point for X Card Maker
+ */
+
 import dotenv from 'dotenv';
 import { TwitterUrlParser } from './urlParser';
 import { TwitterApiClient } from './twitterApi';
+import { AssetDownloader } from './assetDownloader';
+import { CSVExporter } from './csvExporter';
+import { FolderManager } from './folderManager';
 import { TwitterProfileData } from './types';
 
 // Load environment variables
 dotenv.config();
 
 /**
- * Main function to get Twitter profile data from a URL
+ * Main function to process a Twitter profile URL
  * @param profileUrl - The Twitter profile URL or username
- * @returns Promise<TwitterProfileData> - The parsed and fetched profile data
+ * @param options - Processing options
+ * @returns Promise<ProcessingResult> - Processing results
  */
-export async function getTwitterProfileData(profileUrl: string): Promise<TwitterProfileData> {
-  // Validate bearer token
-  const bearerToken = process.env.BEARER_TOKEN;
+export async function processTwitterProfile(
+  profileUrl: string,
+  options: ProcessingOptions = {}
+): Promise<ProcessingResult> {
+  const {
+    bearerToken = process.env.BEARER_TOKEN,
+    outputDir = './downloads',
+    downloadAssets = true,
+    exportCSV = true,
+    cleanup = false
+  } = options;
+
   if (!bearerToken) {
-    throw new Error('BEARER_TOKEN environment variable is required. Please set it in your .env file.');
+    throw new Error('BEARER_TOKEN environment variable is required');
   }
 
   // Extract username from URL
   const username = TwitterUrlParser.extractUsername(profileUrl);
   console.log(`Extracted username: @${username}`);
 
-  // Create API client
-  const apiClient = new TwitterApiClient(bearerToken);
+  // Create folder structure
+  const folderManager = new FolderManager(outputDir);
+  const userDir = await folderManager.createUserDirectory(username);
 
-  // Fetch user data
+  // Fetch profile data
+  const apiClient = new TwitterApiClient(bearerToken);
   const profileData = await apiClient.getUserByUsername(username);
   console.log(`Successfully fetched data for @${username}`);
 
-  return profileData;
+  const result: ProcessingResult = {
+    username,
+    userDir,
+    profileData,
+    assets: null,
+    csvPath: null,
+    errors: []
+  };
+
+  // Download assets
+  if (downloadAssets) {
+    try {
+      const assetDownloader = new AssetDownloader(outputDir);
+      const downloadResult = await assetDownloader.downloadProfileAssets(profileData);
+      result.assets = downloadResult;
+      
+      if (downloadResult.errors.length > 0) {
+        result.errors.push(...downloadResult.errors);
+      }
+    } catch (error) {
+      result.errors.push(`Failed to download assets: ${error}`);
+    }
+  }
+
+  // Export CSV
+  if (exportCSV) {
+    try {
+      const csvExporter = new CSVExporter(outputDir);
+      const csvPath = await csvExporter.exportProfileData(profileData, userDir);
+      result.csvPath = csvPath;
+    } catch (error) {
+      result.errors.push(`Failed to export CSV: ${error}`);
+    }
+  }
+
+  // Cleanup old files
+  if (cleanup) {
+    try {
+      await folderManager.cleanupUserDirectory(username);
+    } catch (error) {
+      result.errors.push(`Failed to cleanup: ${error}`);
+    }
+  }
+
+  return result;
 }
 
 /**
- * CLI function for testing
+ * Processing options
  */
-async function main() {
-  try {
-    // Check if URL is provided as command line argument
-    const profileUrl = process.argv[2];
-    
-    if (!profileUrl) {
-      console.log('Usage: npm run dev <twitter-profile-url>');
-      console.log('Example: npm run dev https://twitter.com/hhaider__');
-      console.log('Example: npm run dev @hhaider__');
-      process.exit(1);
-    }
-
-    console.log(`Fetching profile data for: ${profileUrl}`);
-    
-    const profileData = await getTwitterProfileData(profileUrl);
-    
-    // Display the results
-    console.log('\n=== Twitter Profile Data ===');
-    console.log(`Name: ${profileData.name}`);
-    console.log(`Username: @${profileData.username}`);
-    console.log(`Description: ${profileData.description}`);
-    console.log(`Verified: ${profileData.verified ? 'Yes' : 'No'}`);
-    console.log(`Followers: ${profileData.getFormattedFollowersCount()}`);
-    console.log(`Following: ${profileData.getFormattedFollowingCount()}`);
-    console.log(`Tweets: ${profileData.getFormattedTweetCount()}`);
-    console.log(`Profile Image: ${profileData.profileImageUrl}`);
-    console.log(`Profile Banner: ${profileData.profileBannerUrl}`);
-    
-    // Output as JSON
-    console.log('\n=== JSON Output ===');
-    console.log(JSON.stringify(profileData.toJSON(), null, 2));
-    
-  } catch (error) {
-    console.error('Error:', error instanceof Error ? error.message : error);
-    process.exit(1);
-  }
+export interface ProcessingOptions {
+  bearerToken?: string;
+  outputDir?: string;
+  downloadAssets?: boolean;
+  exportCSV?: boolean;
+  cleanup?: boolean;
 }
 
-// Run CLI if this file is executed directly
-if (require.main === module) {
-  main();
+/**
+ * Processing result
+ */
+export interface ProcessingResult {
+  username: string;
+  userDir: string;
+  profileData: TwitterProfileData;
+  assets: AssetDownloadResult | null;
+  csvPath: string | null;
+  errors: string[];
 }
+
+/**
+ * Asset download result (re-exported from assetDownloader)
+ */
+export interface AssetDownloadResult {
+  username: string;
+  userDir: string;
+  profileImage: string | null;
+  bannerImage: string | null;
+  errors: string[];
+}
+
+// Re-export all modules for external use
+export * from './types';
+export * from './urlParser';
+export * from './twitterApi';
+export * from './assetDownloader';
+export * from './csvExporter';
+export * from './folderManager';

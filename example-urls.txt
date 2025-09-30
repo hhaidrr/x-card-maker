@@ -1,0 +1,4 @@
+# Example URLs for batch processing
+https://twitter.com/hhaider__
+@hhaider__
+https://x.com/hhaider__

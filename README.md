@@ -1,14 +1,17 @@
 # X Card Maker
 
-A Node.js TypeScript library that takes a Twitter/X profile URL, parses the username, fetches profile data from Twitter's API, and stores it in a structured dataclass.
+A powerful Node.js TypeScript CLI tool that processes Twitter/X profile URLs, downloads assets, and organizes data into structured folders with CSV exports.
 
 ## Features
 
 - 🔗 **URL Parsing**: Extract usernames from various Twitter URL formats
 - 🐦 **Twitter API Integration**: Fetch comprehensive profile data using Twitter API v2
-- 📊 **Structured Data**: Store data in TypeScript dataclasses with helper methods
+- 📸 **Asset Downloading**: Download profile images and banner images
+- 📊 **CSV Export**: Export profile data to CSV files
+- 📁 **Folder Organization**: Organize data by username in structured folders
 - 🎯 **Type Safety**: Full TypeScript support with proper interfaces
-- 🛡️ **Error Handling**: Comprehensive error handling for API and parsing errors
+- 🛡️ **Error Handling**: Comprehensive error handling for all operations
+- 🚀 **CLI Interface**: Easy-to-use command-line interface
 
 ## Installation
 
@@ -32,22 +35,70 @@ BEARER_TOKEN=your_bearer_token_here
 
 ## Usage
 
-### Basic Usage
+### CLI Commands
 
-```typescript
-import { getTwitterProfileData } from './src/index';
+#### Process a Single Profile
 
-// Get profile data from any Twitter URL format
-const profileData = await getTwitterProfileData('https://twitter.com/hhaider__');
+```bash
+# Process a single Twitter profile
+npx ts-node src/cli.ts process https://twitter.com/hhaider__
 
-console.log(profileData.name); // "Hamzah Haider"
-console.log(profileData.username); // "hhaider__"
-console.log(profileData.getFormattedFollowersCount()); // "1.2K"
+# Process with custom output directory
+npx ts-node src/cli.ts process https://twitter.com/hhaider__ --output ./my-profiles
+
+# Process without downloading assets
+npx ts-node src/cli.ts process https://twitter.com/hhaider__ --no-assets
+
+# Process without CSV export
+npx ts-node src/cli.ts process https://twitter.com/hhaider__ --no-csv
+
+# Process with cleanup of old files
+npx ts-node src/cli.ts process https://twitter.com/hhaider__ --cleanup
+```
+
+#### Batch Processing
+
+```bash
+# Process multiple URLs from a file
+npx ts-node src/cli.ts batch urls.txt
+
+# Process with custom delay between requests
+npx ts-node src/cli.ts batch urls.txt --delay 2000
+```
+
+#### List Processed Profiles
+
+```bash
+# List all processed profiles
+npx ts-node src/cli.ts list
+
+# Show detailed summary
+npx ts-node src/cli.ts list --summary
+```
+
+#### Cleanup Operations
+
+```bash
+# Clean up old files in all user directories
+npx ts-node src/cli.ts cleanup
+
+# Clean up specific user directory
+npx ts-node src/cli.ts cleanup --user hhaider__
+
+# Dry run to see what would be cleaned up
+npx ts-node src/cli.ts cleanup --dry-run
+```
+
+#### Master CSV
+
+```bash
+# Create a master CSV with all processed profiles
+npx ts-node src/cli.ts master-csv
 ```
 
 ### Supported URL Formats
 
-The library supports various Twitter URL formats:
+The tool supports various Twitter URL formats:
 
 - `https://twitter.com/username`
 - `https://x.com/username`
@@ -56,63 +107,58 @@ The library supports various Twitter URL formats:
 - `@username`
 - `username`
 
-### CLI Usage
+### Output Structure
 
-```bash
-# Run with a Twitter URL
-npm run dev https://twitter.com/hhaider__
+For each processed profile, the tool creates:
 
-# Run with just a username
-npm run dev @hhaider__
+```
+downloads/
+├── username/
+│   ├── profile_image.jpg          # Downloaded profile image
+│   ├── banner_image.jpg           # Downloaded banner image
+│   └── username_data.csv          # Profile data in CSV format
+└── all_profiles.csv               # Master CSV with all profiles
 ```
 
-### Example Output
+### CSV Data Fields
 
-```json
-{
-  "id": "1044891241693962240",
-  "name": "Hamzah Haider",
-  "username": "hhaider__",
-  "description": "Programmer, technologia enthusiast, tinkerer | (-27$ ARR)",
-  "profileImageUrl": "https://pbs.twimg.com/profile_images/1960402843086561280/6hfeqDR5_normal.jpg",
-  "profileBannerUrl": "https://pbs.twimg.com/profile_banners/1044891241693962240/1585009164",
-  "verified": false,
-  "followersCount": 34,
-  "followingCount": 126,
-  "tweetCount": 682,
-  "formattedFollowersCount": "34",
-  "formattedFollowingCount": "126",
-  "formattedTweetCount": "682"
-}
+The CSV files contain the following fields:
+
+- `id` - Twitter user ID
+- `name` - Display name
+- `username` - Username (without @)
+- `description` - Bio/description
+- `verified` - Verification status
+- `followers_count` - Number of followers
+- `following_count` - Number of following
+- `tweet_count` - Number of tweets
+- `listed_count` - Number of lists
+- `like_count` - Number of likes
+- `media_count` - Number of media
+- `subscribes_to_you` - Subscription status
+- `subscription_type` - Subscription type
+- `profile_image_url` - Profile image URL
+- `profile_banner_url` - Banner image URL
+- `created_at` - Processing timestamp
+
+## Programmatic Usage
+
+```typescript
+import { processTwitterProfile } from './src/index';
+
+// Process a profile programmatically
+const result = await processTwitterProfile('https://twitter.com/hhaider__', {
+  outputDir: './my-profiles',
+  downloadAssets: true,
+  exportCSV: true,
+  cleanup: false
+});
+
+console.log(`Processed @${result.username}`);
+console.log(`Profile data:`, result.profileData);
+console.log(`Assets:`, result.assets);
+console.log(`CSV path:`, result.csvPath);
 ```
-
-## API Reference
-
-### `getTwitterProfileData(profileUrl: string): Promise<TwitterProfileData>`
-
-Fetches Twitter profile data from a URL.
-
-**Parameters:**
-- `profileUrl`: Twitter profile URL or username
-
-**Returns:** `TwitterProfileData` object with profile information
-
-### `TwitterUrlParser`
-
-Utility class for parsing Twitter URLs.
-
-- `extractUsername(url: string): string` - Extract username from URL
-- `isValidTwitterUrl(url: string): boolean` - Check if URL is valid
-- `normalizeUrl(url: string): string` - Normalize URL to standard format
-
-### `TwitterProfileData`
-
-Dataclass containing Twitter profile information with helper methods:
-
-- `getFormattedFollowersCount(): string` - Format follower count (e.g., "1.2K")
-- `getFormattedFollowingCount(): string` - Format following count
-- `getFormattedTweetCount(): string` - Format tweet count
-- `toJSON(): Record<string, any>` - Convert to plain object
 
 ## Development
 
@@ -123,20 +169,25 @@ npm install
 # Build TypeScript
 npm run build
 
-# Run in development mode
-npm run dev
+# Run CLI in development mode
+npm run cli process https://twitter.com/hhaider__
 
-# Run example
-npm run dev src/example.ts
+# Run tests
+npm test
+
+# Run tests with coverage
+npm run test:coverage
 ```
 
 ## Error Handling
 
-The library provides comprehensive error handling:
+The tool provides comprehensive error handling:
 
 - **Invalid URLs**: Clear error messages for malformed URLs
 - **API Errors**: Handles rate limits, authentication, and user not found errors
 - **Network Errors**: Proper handling of network connectivity issues
+- **File System Errors**: Graceful handling of file operations
+- **Asset Download Errors**: Continues processing even if some assets fail to download
 
 ## License
 

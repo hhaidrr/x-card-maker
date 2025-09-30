@@ -136,4 +136,28 @@ export class TwitterProfileData {
       formattedTweetCount: this.getFormattedTweetCount(),
     };
   }
+
+  /**
+   * Convert to CSV row data
+   */
+  toCSVRow(): Record<string, any> {
+    return {
+      id: this.id,
+      name: this.name,
+      username: this.username,
+      description: this.description,
+      verified: this.verified,
+      followers_count: this.followersCount,
+      following_count: this.followingCount,
+      tweet_count: this.tweetCount,
+      listed_count: this.listedCount,
+      like_count: this.likeCount,
+      media_count: this.mediaCount,
+      subscribes_to_you: this.subscribesToYou,
+      subscription_type: this.subscriptionType,
+      profile_image_url: this.profileImageUrl,
+      profile_banner_url: this.profileBannerUrl,
+      created_at: new Date().toISOString()
+    };
+  }
 }

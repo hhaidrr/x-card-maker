@@ -1,26 +1,40 @@
 {
   "name": "x-card-maker",
   "version": "1.0.0",
-  "description": "Generate X/Twitter profile cards from profile URLs",
+  "description": "Generate X/Twitter profile cards from profile URLs with asset downloading",
   "main": "dist/index.js",
+  "bin": {
+    "x-card-maker": "dist/cli.js"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
-    "test": "jest"
+    "cli": "ts-node src/cli.ts",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
-  "keywords": ["twitter", "x", "profile", "card", "generator"],
+  "keywords": ["twitter", "x", "profile", "card", "generator", "assets", "downloader"],
   "author": "Hamzah Haider",
   "license": "MIT",
   "dependencies": {
     "axios": "^1.6.0",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "commander": "^11.1.0",
+    "csv-writer": "^1.6.0",
+    "fs-extra": "^11.1.1",
+    "path": "^0.12.7",
+    "chalk": "^4.1.2",
+    "ora": "^5.4.1"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@types/fs-extra": "^11.0.1",
     "typescript": "^5.0.0",
     "ts-node": "^10.9.0",
     "jest": "^29.0.0",
-    "@types/jest": "^29.0.0"
+    "@types/jest": "^29.0.0",
+    "ts-jest": "^29.0.0"
   }
 }
